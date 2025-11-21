@@ -15,6 +15,12 @@ export class UserFilterItems {
   @IsObject({ message: 'The email filter must be a valid object' })
   @ValidateNested({ message: 'The email filter must be a valid object' })
   readonly email?: FilterSearchItemDto;
+
+  @IsOptional()
+  @Transform(({ value }) => plainToInstance(FilterSearchItemDto, value))
+  @IsObject({ message: 'The createdAt filter must be a valid object' })
+  @ValidateNested({ message: 'The createdAt filter must be a valid object' })
+  readonly createdAt?: FilterSearchItemDto;
 }
 
 export class UserFindDto extends FindFilterDto {

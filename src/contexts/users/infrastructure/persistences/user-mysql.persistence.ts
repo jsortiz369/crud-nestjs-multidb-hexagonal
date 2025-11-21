@@ -5,6 +5,7 @@ import { DataFind, RoleType, StatusType } from 'src/shared/domain/interfaces';
 import { $Enums } from 'generated/mysql/prisma';
 import { UserEmail, UserId } from '../../domain/vo';
 import { UserFind, UserPrimitive } from '../../domain/user.interface';
+import { FiledType, FilterType } from 'src/shared/infrastructure/persistences/prisma-mysql.persistence';
 
 export class UserMysqlPersistence implements UserRepository {
   /**
@@ -30,29 +31,48 @@ export class UserMysqlPersistence implements UserRepository {
     const { page, limit, sortOrder, sort, filters } = userFind;
 
     const where: any = { deletedAt: null };
-    const filterCampos = ['firstName', 'secondName', 'firstSurname', 'secondSurname'];
-    if (filters?.global) {
-      where.OR = filterCampos.map((_) => ({
-        [_]: {
-          contains: filters?.global?.value,
-        },
-      }));
-    } else {
-      ['firstName', 'secondName', 'firstSurname', 'email'].forEach((field) => {
-        if (filters?.[field]) {
-          where.AND ??= [];
 
-          if (filters?.[field]?.matchMode === 'notEquals') where.AND.push({ [field]: { not: filters?.[field]?.value } });
-          else if (filters?.[field]?.matchMode === 'notContains') where.AND.push({ [field]: { not: { contains: filters?.[field]?.value } } });
-          else where.AND.push({ [field]: { [filters?.[field]?.matchMode]: filters?.[field]?.value } });
-        }
+    // TODO: Total users
+    const total = await this._prisma.user.count({ where: { ...where } });
+
+    // TODO: Field filter
+    const filterCampos: FiledType[] = [
+      { value: 'firstName', type: 'string' },
+      { value: 'secondName', type: 'string' },
+      { value: 'firstSurname', type: 'string' },
+      { value: 'secondSurname', type: 'string' },
+      { value: 'birthday', type: 'Date' },
+      { value: 'phone', type: 'string' },
+      { value: 'email', type: 'string' },
+      {
+        value: 'status',
+        type: 'enum',
+        callback: (value: string) =>
+          value.toLowerCase() === 'activo' ? $Enums.Status.ACTIVE : value.toLowerCase() === 'inactivo' ? $Enums.Status.INACTIVE : undefined,
+      },
+      {
+        value: 'role',
+        type: 'enum',
+        callback: (value: string) =>
+          value.toLowerCase() === 'admin' ? $Enums.Role.ADMIN : value.toLowerCase() === 'usuario' ? $Enums.Role.USER : undefined,
+      },
+      { value: 'createdAt', type: 'Date' },
+      { value: 'updatedAt', type: 'Date' },
+    ];
+    if (filters?.global?.value !== undefined) {
+      where.OR = filterCampos.map((_) => this._prisma.globalFilter(_, filters.global!.value)).filter((_) => _ !== null);
+    } else {
+      filterCampos.forEach((_) => {
+        if (!filters || !filters?.[_.value] || filters?.[_.value]?.value === undefined) return;
+        const filter = this._prisma.fieldFilter(_, filters[_.value] as FilterType);
+        if (filter == null) return;
+        where.AND ??= [];
+        where.AND.push(filter);
       });
     }
 
-    // matchModeToPrisma
-
     // TODO: total users
-    const total = await this._prisma.user.count({ where });
+    const totalFilters = await this._prisma.user.count({ where });
 
     // TODO: users
     const result = await this._prisma.user.findMany({
@@ -87,9 +107,9 @@ export class UserMysqlPersistence implements UserRepository {
       }),
       meta: {
         total: total,
-        filter: undefined,
-        page: 0,
-        lastPage: 0,
+        filter: totalFilters != total ? totalFilters : undefined,
+        page,
+        lastPage: Math.ceil(total / limit),
       },
     };
   }
