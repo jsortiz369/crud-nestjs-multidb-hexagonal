@@ -1,4 +1,4 @@
-import { MatchModeType, RoleType, SortOrderType, StatusType } from 'src/shared/domain/interfaces';
+import { MatchModeStringType, RoleType, SortOrderType, StatusType } from 'src/shared/domain/interfaces';
 import * as vo from './vo';
 
 export interface UserPrimitive {
@@ -79,7 +79,7 @@ export enum UserSort {
 }
 
 export interface UserFilterFind {
-  global?: { value: string; matchMode: MatchModeType };
+  global?: { value: string; matchMode: MatchModeStringType };
 }
 
 export interface UserFind {
@@ -88,4 +88,5 @@ export interface UserFind {
   sort: UserSort;
   sortOrder: SortOrderType;
   filters?: UserFilterFind;
+  search?: string;
 }

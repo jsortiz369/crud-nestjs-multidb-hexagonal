@@ -1,8 +1,9 @@
 import { LoggerService, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 
 import { PrismaClient } from 'generated/mysql/prisma';
-import { MatchModeType } from 'src/shared/domain/interfaces';
+import { MatchModeStringType } from 'src/shared/domain/interfaces';
 import { EnvRepository } from 'src/shared/domain/repositories';
+import { PrismaUtils } from '../utils/prisma.utils';
 
 export type FiledType =
   | { value: string; type: 'string' | 'number' | 'boolean' | 'Date' }
@@ -10,10 +11,11 @@ export type FiledType =
 
 export type FilterType = {
   value: string;
-  matchMode: MatchModeType;
+  matchMode: MatchModeStringType;
 };
 
 export class PrismaMysqlPersistence extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  private readonly _utls = PrismaUtils;
   constructor(
     private readonly _logger: LoggerService,
     private readonly _envRepository: EnvRepository,
@@ -39,7 +41,11 @@ export class PrismaMysqlPersistence extends PrismaClient implements OnModuleInit
     await this.$disconnect();
   }
 
-  globalFilter(field: FiledType, value: string) {
+  get $utls() {
+    return this._utls;
+  }
+
+  /* globalFilter(field: FiledType, value: string) {
     if (field.type === 'enum') {
       const newValue = field.callback(value);
       if (newValue === undefined) return null;
@@ -123,24 +129,25 @@ export class PrismaMysqlPersistence extends PrismaClient implements OnModuleInit
   }
 
   private stringFilter(field: string, filterType: FilterType) {
-    if (filterType.matchMode === MatchModeType.NOT_EQUALS) return { [field]: { not: filterType.value } };
-    if (filterType.matchMode === MatchModeType.NOT_CONTAINS) return { [field]: { not: { contains: filterType.value } } };
+    if (filterType.matchMode === MatchModeStringType.NOT_EQUALS) return { [field]: { not: filterType.value } };
+    if (filterType.matchMode === MatchModeStringType.NOT_CONTAINS) return { [field]: { not: { contains: filterType.value } } };
+    if (filterType.matchMode === MatchModeStringType.IN) return { [field]: { in: filterType.value.split(',') } };
     return { [field]: { [filterType.matchMode]: filterType.value } };
   }
 
   private enumFilter(field: { value: string; callback: (value: string) => string | undefined }, filterType: FilterType) {
-    if (filterType.matchMode === MatchModeType.NOT_EQUALS) {
+    if (filterType.matchMode === MatchModeStringType.NOT_EQUALS) {
       const newValue = field.callback(field.value);
       if (newValue === undefined || newValue === null) return null;
       return { [field.value]: { not: newValue } };
     }
 
-    if (filterType.matchMode === MatchModeType.EQUALS) {
+    if (filterType.matchMode === MatchModeStringType.EQUALS) {
       const newValue = field.callback(field.value);
       if (newValue === undefined || newValue === null) return null;
       return { [field.value]: newValue };
     }
 
     return null;
-  }
+  } */
 }

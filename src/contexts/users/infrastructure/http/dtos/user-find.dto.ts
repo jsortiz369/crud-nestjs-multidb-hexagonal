@@ -1,26 +1,28 @@
-import { IsEnum, IsObject, IsOptional, ValidateNested } from 'class-validator';
-import { plainToInstance, Transform } from 'class-transformer';
-import { FilterSearchItemDto, FindFilterDto } from 'src/shared/infrastructure/http/dtos';
+import { BadRequestException } from '@nestjs/common';
+import { IsEnum, IsObject, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { plainToInstance, Transform, TransformFnParams, Type } from 'class-transformer';
+import { FilterStringSearchItemDto, FindFilterDto } from 'src/shared/infrastructure/http/dtos';
 import { UserSort } from 'src/contexts/users/domain/user.interface';
+import { SearchOrFilters } from '../../decorators';
 
 export class UserFilterItems {
   @IsOptional()
-  @Transform(({ value }) => plainToInstance(FilterSearchItemDto, value))
+  @Transform(({ value }) => plainToInstance(FilterStringSearchItemDto, value))
   @IsObject({ message: 'The global filter must be a valid object' })
   @ValidateNested({ message: 'The global filter must be a valid object' })
-  readonly global?: FilterSearchItemDto;
+  readonly global?: FilterStringSearchItemDto;
 
   @IsOptional()
-  @Transform(({ value }) => plainToInstance(FilterSearchItemDto, value))
+  @Transform(({ value }) => plainToInstance(FilterStringSearchItemDto, value))
   @IsObject({ message: 'The email filter must be a valid object' })
   @ValidateNested({ message: 'The email filter must be a valid object' })
-  readonly email?: FilterSearchItemDto;
+  readonly email?: FilterStringSearchItemDto;
 
-  @IsOptional()
-  @Transform(({ value }) => plainToInstance(FilterSearchItemDto, value))
+  /* @IsOptional()
+  @Transform(({ value }) => plainToInstance(FilterStringSearchItemDto, value))
   @IsObject({ message: 'The createdAt filter must be a valid object' })
   @ValidateNested({ message: 'The createdAt filter must be a valid object' })
-  readonly createdAt?: FilterSearchItemDto;
+  readonly createdAt?: FilterStringSearchItemDto; */
 }
 
 export class UserFindDto extends FindFilterDto {
@@ -32,7 +34,28 @@ export class UserFindDto extends FindFilterDto {
   readonly sort: UserSort = UserSort.CREATED_AT;
 
   @IsOptional()
-  @Transform(({ value }: { value: string }) => plainToInstance(UserFilterItems, value && JSON.parse(value)), { toClassOnly: true })
+  @Transform(
+    ({ value }: TransformFnParams) => {
+      try {
+        const object = JSON.parse(value as string);
+        return plainToInstance(UserFilterItems, object);
+      } catch (_) {
+        throw new BadRequestException('filters must be valid JSON');
+      }
+    },
+    {
+      toClassOnly: true,
+    },
+  )
+  @Type(() => UserFilterItems)
   @ValidateNested({ message: 'The filters must be a valid object' })
-  readonly filters?: UserFilterItems = undefined;
+  readonly filters?: UserFilterItems;
+
+  @IsOptional()
+  @IsString({ message: 'The search must be a string' })
+  @MaxLength(100, { message: 'The search must be less than 100 characters' })
+  readonly search?: string;
+
+  @SearchOrFilters()
+  private readonly _onlyOne?: any;
 }

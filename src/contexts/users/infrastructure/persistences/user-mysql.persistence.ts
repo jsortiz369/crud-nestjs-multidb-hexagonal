@@ -1,7 +1,7 @@
 import { PrismaMysqlPersistence } from 'src/shared/infrastructure/persistences';
 import { User } from '../../domain/user';
 import { UserRepository } from '../../domain/user.repository';
-import { DataFind, RoleType, StatusType } from 'src/shared/domain/interfaces';
+import { DataFind, FiledSearchType, RoleType, StatusType } from 'src/shared/domain/interfaces';
 import { $Enums } from 'generated/mysql/prisma';
 import { UserEmail, UserId } from '../../domain/vo';
 import { UserFind, UserPrimitive } from '../../domain/user.interface';
@@ -28,7 +28,7 @@ export class UserMysqlPersistence implements UserRepository {
    * @returns {Promise<DataFind<User>>}
    */
   async find(userFind: UserFind): Promise<DataFind<User>> {
-    const { page, limit, sortOrder, sort, filters } = userFind;
+    const { page, limit, sortOrder, sort, filters, search } = userFind;
 
     const where: any = { deletedAt: null };
 
@@ -36,32 +36,39 @@ export class UserMysqlPersistence implements UserRepository {
     const total = await this._prisma.user.count({ where: { ...where } });
 
     // TODO: Field filter
-    const filterCampos: FiledType[] = [
-      { value: 'firstName', type: 'string' },
-      { value: 'secondName', type: 'string' },
-      { value: 'firstSurname', type: 'string' },
-      { value: 'secondSurname', type: 'string' },
-      { value: 'birthday', type: 'Date' },
-      { value: 'phone', type: 'string' },
-      { value: 'email', type: 'string' },
+    const filterCampos: FiledSearchType[] = [
+      { field: 'firstName', type: 'string' },
+      { field: 'secondName', type: 'string' },
+      { field: 'firstSurname', type: 'string' },
+      { field: 'secondSurname', type: 'string' },
+      { field: 'birthday', type: 'Date' },
+      { field: 'phone', type: 'string' },
+      { field: 'email', type: 'string' },
       {
-        value: 'status',
+        field: 'status',
         type: 'enum',
         callback: (value: string) =>
           value.toLowerCase() === 'activo' ? $Enums.Status.ACTIVE : value.toLowerCase() === 'inactivo' ? $Enums.Status.INACTIVE : undefined,
       },
       {
-        value: 'role',
+        field: 'role',
         type: 'enum',
         callback: (value: string) =>
           value.toLowerCase() === 'admin' ? $Enums.Role.ADMIN : value.toLowerCase() === 'usuario' ? $Enums.Role.USER : undefined,
       },
-      { value: 'createdAt', type: 'Date' },
-      { value: 'updatedAt', type: 'Date' },
+      //{ field: 'createdAt', type: 'Date' },
+      //{ field: 'updatedAt', type: 'Date' },
     ];
-    if (filters?.global?.value !== undefined) {
-      where.OR = filterCampos.map((_) => this._prisma.globalFilter(_, filters.global!.value)).filter((_) => _ !== null);
-    } else {
+
+    if (search !== undefined) {
+      where.OR = filterCampos.map((_) => this._prisma.$utls.searchFilter(_, search)).filter((_) => _ !== null && _ !== undefined);
+    }
+
+    console.log(where);
+
+    /* if (search !== undefined) {
+      where.OR = filterCampos.map((_) => this._prisma.globalFilter(_, search)).filter((_) => _ !== null);
+    } else if (filters !== undefined) {
       filterCampos.forEach((_) => {
         if (!filters || !filters?.[_.value] || filters?.[_.value]?.value === undefined) return;
         const filter = this._prisma.fieldFilter(_, filters[_.value] as FilterType);
@@ -69,7 +76,7 @@ export class UserMysqlPersistence implements UserRepository {
         where.AND ??= [];
         where.AND.push(filter);
       });
-    }
+    } */
 
     // TODO: total users
     const totalFilters = await this._prisma.user.count({ where });
