@@ -1,4 +1,4 @@
-import { PageNotFoundException } from 'src/shared/domain/exceptions';
+import { PageNotFoundException } from 'src/shared/system/domain/exceptions';
 import { UserFind } from '../domain/user.interface';
 import { UserRepository } from '../domain/user.repository';
 

@@ -1,7 +1,7 @@
 import { defineConfig } from 'prisma/config';
-import { EnvPersistence } from './src/shared/infrastructure/persistences/env.persistence';
+import { ZodEnvPersistence } from './src/shared/env/infrastructure/persistences';
 
-const _env = new EnvPersistence();
+const _env = new ZodEnvPersistence();
 const typedb = _env.get('DB_TYPE');
 const typeConect = _env.getUrlDataSource();
 process.env.DATABASE_URL = typeConect;

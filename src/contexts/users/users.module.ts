@@ -1,18 +1,20 @@
 import { Logger, Module } from '@nestjs/common';
-import { DBModule } from 'src/shared/infrastructure/config/db/db.module';
 
 import { UserRepository } from './domain/user.repository';
 import { UserMysqlPersistence } from './infrastructure/persistences/user-mysql.persistence';
-import { MysqlConnect } from 'src/shared/infrastructure/config/db/prisma/persistences';
-import { UUIDModule } from 'src/shared/infrastructure/config/uuid/uuid.module';
-import { UuidRepository } from 'src/shared/infrastructure/config/uuid/v4/repository';
+import { DatabaseModule } from 'src/shared/database/database.module';
+import { UuidModule } from 'src/shared/uuid/uuid.module';
+import { EnvModule } from 'src/shared/env/env.module';
+import { EnvRepository } from 'src/shared/env/domain/env.repository';
+import { PrismaMysqlPersistence } from 'src/shared/database/infrastructure/persistences';
+import { UuidRepository } from 'src/shared/uuid/domain/uuid.repository';
 
 import * as useCases from './application';
-import * as controllers from './infrastructure/http/controllers';
 import * as services from './domain/services';
+import * as controllers from './infrastructure/http/controllers';
 
 @Module({
-  imports: [DBModule, UUIDModule],
+  imports: [EnvModule, DatabaseModule, UuidModule],
   controllers: [
     controllers.UserCreateController,
     controllers.UserFindOneByIdController,
@@ -24,8 +26,15 @@ import * as services from './domain/services';
     Logger,
     {
       provide: UserRepository,
-      useFactory: (persistence: MysqlConnect) => new UserMysqlPersistence(persistence),
-      inject: [MysqlConnect],
+      useFactory: (_env: EnvRepository, persistence: PrismaMysqlPersistence) => {
+        if (_env.get('NODE_ENV') == 'test') return null;
+        const typeDb = _env.get('DB_TYPE');
+        if (typeDb === 'postgresql') throw new Error('Postgres not implemented for UserRepository');
+        if (typeDb === 'sqlserver') throw new Error('sqlserver not implemented for UserRepository');
+        if (typeDb === 'mysql') return new UserMysqlPersistence(persistence);
+        throw new Error('No persistence defined for UserRepository');
+      },
+      inject: [EnvRepository, PrismaMysqlPersistence],
     },
     {
       provide: services.UserExistByEmailService,

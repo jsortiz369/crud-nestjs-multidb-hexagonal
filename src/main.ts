@@ -4,21 +4,21 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import fastifyMultipart from '@fastify/multipart';
 process.env.TZ = 'UTC';
 
-import { AppModule } from './app.module';
-import { EnvPersistence } from './shared/infrastructure/persistences';
-import { HttpExceptionFilter } from './shared/infrastructure/http/filters';
-import { MultipartBodyInterceptor } from './shared/infrastructure/http/interceptors';
+import { AppModule } from './app/app.module';
+import { EnvRepository } from './shared/env/domain/env.repository';
+import { HttpExceptionFilter } from './app/http/filters';
+import { MultipartBodyInterceptor } from './app/http/interceptors';
 
 async function bootstrap() {
-  const logger = new Logger();
+  const logger = new Logger('BootstrapApplication');
 
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
 
   // global filters
-  app.useGlobalFilters(new HttpExceptionFilter(logger));
+  app.useGlobalFilters(app.get<HttpExceptionFilter>(HttpExceptionFilter));
 
   // global interceptors
-  app.useGlobalInterceptors(new MultipartBodyInterceptor(logger));
+  app.useGlobalInterceptors(app.get<MultipartBodyInterceptor>(MultipartBodyInterceptor));
 
   // global prefix
   app.setGlobalPrefix('api');
@@ -32,7 +32,7 @@ async function bootstrap() {
   });
 
   // get port from env
-  const _env = new EnvPersistence();
+  const _env = app.get<EnvRepository>(EnvRepository);
   const port: number | string = _env.get('PORT');
   const origin: string[] = _env.get('CORS_ORIGIN');
 
@@ -57,8 +57,8 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0', (): void => {
     app
       .getUrl()
-      .then((url) => logger.log(`Application is running on: ${url}`, 'BootstrapApplication'))
-      .catch((err) => logger.log(err, 'BootstrapApplication'));
+      .then((url) => logger.log(`Application is running on: ${url}`))
+      .catch((err) => logger.log(err));
   });
 }
 

@@ -1,9 +1,10 @@
-import { UuidRepository } from 'src/shared/domain/repositories';
 import { UserCreate } from '../domain/user.interface';
 import { User } from '../domain/user';
-import * as vo from '../domain/vo';
 import { UserRepository } from '../domain/user.repository';
 import { UserExistByEmailService } from '../domain/services';
+import { UuidRepository } from 'src/shared/uuid/domain/uuid.repository';
+
+import * as vo from '../domain/vo';
 
 export class UserCreateUserCase {
   /**
