@@ -16,8 +16,8 @@ export class UserCreateController {
   constructor(private readonly _handler: UserCreateHandler) {}
 
   @Post()
-  async execute(@Body() body: UserCreateDto): Promise<any> {
-    // create user
+  async execute(@Body() body: UserCreateDto) {
+    // TODO: call handler to create user
     const result = await this._handler.execute(
       new UserCreateCommand(
         body.firstName,

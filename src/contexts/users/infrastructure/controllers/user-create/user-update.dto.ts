@@ -57,9 +57,9 @@ export class UserCreateDto {
 
   @IsOptional()
   @IsEnum(StatusType, { message: 'The status is not valid' })
-  readonly status: StatusType = StatusType.ACTIVE;
+  readonly status: StatusType;
 
   @IsOptional()
   @IsEnum(RoleType, { message: 'The role is not valid' })
-  readonly role: RoleType = RoleType.USER;
+  readonly role: RoleType;
 }

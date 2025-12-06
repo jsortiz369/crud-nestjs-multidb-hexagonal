@@ -9,18 +9,31 @@ import { UserPersistenceProvider } from './infrastructure/persistences';
 
 import * as controllers from './infrastructure/controllers';
 import * as handlers from './application';
+import * as services from './domain/service';
 
 @Module({
   imports: [EnvModule, DatabaseModule, UuidModule],
-  controllers: [controllers.UserCreateController],
+  controllers: [controllers.UserCreateController, controllers.UserUpdateController],
   providers: [
     UserPersistenceProvider,
+    {
+      provide: services.UserFindOneByIdService,
+      useFactory: (userRepository: UserRepository) => new services.UserFindOneByIdService(userRepository),
+      inject: [UserRepository],
+    },
     {
       provide: handlers.UserCreateHandler,
       useFactory: (_uuidRepository: UuidRepository, _userRepository: UserRepository) => {
         return new handlers.UserCreateHandler(_uuidRepository, _userRepository);
       },
       inject: [UuidRepository, UserRepository],
+    },
+    {
+      provide: handlers.UserUpdateHandler,
+      useFactory: (_userRepository: UserRepository, _userFindOneByIdService: services.UserFindOneByIdService) => {
+        return new handlers.UserUpdateHandler(_userRepository, _userFindOneByIdService);
+      },
+      inject: [UserRepository, services.UserFindOneByIdService],
     },
     /* {
       provide: UserRepository,

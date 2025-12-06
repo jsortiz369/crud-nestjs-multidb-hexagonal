@@ -170,7 +170,7 @@ export class User {
     return this.deletedAtVO;
   }
 
-  get id(): vo.UserId {
+  get _id(): vo.UserId {
     return this._idVO;
   }
 
